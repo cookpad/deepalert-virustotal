@@ -63,7 +63,7 @@ type VirusTotalIPAddrReport struct {
 	DetectedReferrerSamples      []VtSample     `json:"detected_referrer_samples"`
 }
 
-func NewVirusTotal(token string) VirusTotal {
+func newVirusTotal(token string) VirusTotal {
 	vt := VirusTotal{}
 	vt.endpoint = "https://www.virustotal.com/vtapi/v2"
 	vt.token = token

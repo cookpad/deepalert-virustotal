@@ -37,12 +37,12 @@ func getSecretValues(secretArn string, values interface{}) error {
 	})
 
 	if err != nil {
-		return errors.Wrap(err, "Fail to retrieve secret values")
+		return errors.Wrapf(err, "Fail to retrieve secret values: %s", secretArn)
 	}
 
 	err = json.Unmarshal([]byte(*result.SecretString), values)
 	if err != nil {
-		return errors.Wrap(err, "Fail to parse secret values as JSON")
+		return errors.Wrapf(err, "Fail to parse secret values as JSON: %s", secretArn)
 	}
 
 	return nil
@@ -52,27 +52,57 @@ type vtSecrets struct {
 	VirusTotalToken string `json:"virustotal_token"`
 }
 
-func Handler(args Arguments) (deepalert.ReportContentEntity, error) {
-	if args.Attr.Type != deepalert.TypeIPAddr {
-		return nil, nil
+func insecptRemoteIPAddr(ipaddr, secretArn string) (*deepalert.TaskResult, error) {
+	var secrets vtSecrets
+	if err := getSecretValues(secretArn, &secrets); err != nil {
+		return nil, err
 	}
 
-	var secrets vtSecrets
-	if err := getSecretValues(args.SecretArn, &secrets); err != nil {
-		return nil, errors.Wrapf(err, "Fail to get values from SecretsManager: %s", args.SecretArn)
+	vt := newVirusTotal(secrets.VirusTotalToken)
+
+	report, err := vt.QueryIPAddr(ipaddr)
+	if err != nil {
+		return nil, err
+	}
+	/*
+		mwReports, err := traceMalware(report, &vt)
+		if err != nil {
+			return nil, err
+		}
+
+		remote := ar.ReportOpponentHost{
+			IPAddr:         []string{ipaddr},
+			RelatedMalware: mwReports,
+			RelatedDomains: traceDomain(report.Resolutions),
+			RelatedURLs:    traceURL(report.DetectedURLs),
+		}
+
+		page := ar.NewReportPage()
+		page.Title = fmt.Sprintf("VirusTotal Report of %s", ipaddr)
+		page.OpponentHosts = append(page.OpponentHosts, remote)
+
+	*/
+
+	return nil, nil
+}
+
+func handler(args Arguments) (*deepalert.TaskResult, error) {
+	if args.Attr.Match(deepalert.CtxRemote, deepalert.TypeIPAddr) {
+		return insecptRemoteIPAddr(args.Attr.Value, args.SecretArn)
 	}
 
 	return nil, nil
 }
 
-func lambdaHandler(ctx context.Context, attr deepalert.Attribute) (deepalert.ReportContentEntity, error) {
+func lambdaHandler(ctx context.Context, attr deepalert.Attribute) (*deepalert.TaskResult, error) {
 	args := Arguments{
 		Attr:      attr,
 		SecretArn: os.Getenv("SecretArn"),
 	}
-	return Handler(args)
+	return handler(args)
 }
 
 func main() {
-	deepalert.StartInspector(lambdaHandler, "crowdstrike-falcon", os.Getenv("SUBMIT_TOPIC"))
+	deepalert.StartInspector(lambdaHandler, "virustotal",
+		os.Getenv("ContentTopic"), os.Getenv("AttributeTopic"))
 }

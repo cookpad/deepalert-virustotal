@@ -29,8 +29,14 @@ Resources:
         Fn::If: [ LambdaRoleRequired, {"Fn::GetAtt": LambdaRole.Arn}, {Ref: LambdaRoleArn} ]
       Environment:
         Variables:
-          SECRET_ARN:
+          SecretArn:
             Ref: SecretArn
+          ContentTopic:
+              Fn::ImportValue:
+                Fn::Sub: ${DeepAlertStackName}-ContentTopic
+          AttributeTopic:
+              Fn::ImportValue:
+                Fn::Sub: ${DeepAlertStackName}-AttributeTopic
       Events:
         NotifyTopic:
           Type: SNS
