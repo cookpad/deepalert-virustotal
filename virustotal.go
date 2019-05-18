@@ -39,6 +39,9 @@ type VtSample struct {
 	Positives int    `json:"positives"`
 	Total     int    `json:"total"`
 	Date      string `json:"date"`
+
+	// An original field to indicate type of relation with IPaddr/domain
+	relation string
 }
 
 type vtResolution struct {
