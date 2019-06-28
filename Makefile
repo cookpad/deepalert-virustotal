@@ -1,28 +1,14 @@
-STACK_CONFIG ?= config.json
+StackName := $(shell jsonnet $(DEPLOY_CONFIG) | jq .StackName )
+Region := $(shell jsonnet $(DEPLOY_CONFIG) | jq .Region )
+CodeS3Bucket := $(shell jsonnet $(DEPLOY_CONFIG) | jq .CodeS3Bucket )
+CodeS3Prefix := $(shell jsonnet $(DEPLOY_CONFIG) | jq .CodeS3Prefix )
 
-ifeq (,$(wildcard $(STACK_CONFIG)))
-    $(error $(STACK_CONFIG) is not found)
-endif
+CWD := ${CURDIR}
+CODE_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+SAM_FILE=$(CODE_DIR)/sam.json
+BINPATH := $(CODE_DIR)/build/main
 
-StackName := $(shell cat $(STACK_CONFIG) | jq '.["StackName"]')
-Region := $(shell cat $(STACK_CONFIG) | jq '.["Region"]')
-CodeS3Bucket := $(shell cat $(STACK_CONFIG) | jq '.["CodeS3Bucket"]')
-CodeS3Prefix := $(shell cat $(STACK_CONFIG) | jq '.["CodeS3Prefix"]')
-
-# PARAMETERS := $(shell cat $(STACK_CONFIG) | grep -e LambdaRoleArn -e SecretArn -e DeepAlertStack | tr '\n' ' ')
-
-LambdaRoleArn := LambdaRoleArn=$(shell cat $(STACK_CONFIG) | jq '.LambdaRoleArn | select(. != null)')
-SecretArn := SecretArn=$(shell cat $(STACK_CONFIG) | jq '.["SecretArn"]')
-DeepAlertStackName := DeepAlertStackName=$(shell cat $(STACK_CONFIG) | jq '.["DeepAlertStackName"]')
-
-TEMPLATE_FILE=template.yml
-SAM_FILE=sam.yml
-
-ifneq (, $(strip $(PARAMETERS)))
-	PARAMETERS_OVERRIDES=--parameter-overrides $(PARAMETERS)
-else
-	PARAMETERS_OVERRIDES=
-endif
+TEMPLATE_FILE := $(CODE_DIR)/template.json
 
 all: deploy
 
@@ -32,10 +18,13 @@ test:
 clean:
 	rm build/main
 
-build/main: *.go
-	env GOARCH=amd64 GOOS=linux go build -o build/main
+$(BINPATH): $(CODE_DIR)/*.go
+	cd $(CODE_DIR) && env GOARCH=amd64 GOOS=linux go build -o build/main $(CODE_DIR) && cd $(CWD)
 
-sam.yml: $(TEMPLATE_FILE) build/main
+$(TEMPLATE_FILE): $(TEMPLATE)
+	jsonnet $(TEMPLATE) -o $(TEMPLATE_FILE)
+
+$(SAM_FILE): $(TEMPLATE_FILE) $(BINPATH)
 	aws cloudformation package \
 		--region $(Region) \
 		--template-file $(TEMPLATE_FILE) \
@@ -48,5 +37,4 @@ deploy: $(SAM_FILE)
 		--region $(Region) \
 		--template-file $(SAM_FILE) \
 		--stack-name $(StackName) \
-		--capabilities CAPABILITY_IAM \
-		--parameter-overrides $(LambdaRoleArn) $(SecretArn) $(DeepAlertStackName)
+		--capabilities CAPABILITY_IAM
