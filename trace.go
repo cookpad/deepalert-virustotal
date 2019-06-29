@@ -17,37 +17,94 @@ func traceMalware(samples []VtSample, vt *VirusTotal) ([]deepalert.EntityMalware
 		"Symantec",
 	}
 
+	var sampleMap map[string]*VtSample
+	for _, s := range samples {
+		sampleMap[s.SHA256] = &s
+	}
+
 	var hashes []string
 	for _, sample := range samples {
 		hashes = append(hashes, sample.SHA256)
 	}
 
-	mwReport, err := vt.QueryFileBulk(hashes)
+	mwReports, err := vt.QueryFileBulk(hashes)
 	if err != nil {
 		return nil, errors.Wrap(err, "Fail to query in traceMalware")
 	}
 
-	convMalwareReport := func(targets []VtSample, relation string) {
-		for _, sample := range targets {
-			t, err := time.Parse("2006-01-02 15:04:05", sample.Date)
-			if err != nil {
-				log.Println("Error: Invalid time format of VT result, ", sample.Date)
-				continue
+	var mwEntities []deepalert.EntityMalware
+
+	for _, report := range mwReports {
+		// Pickup sample
+		sample, ok := sampleMap[report.SHA256]
+		if !ok {
+			log.Printf("Error: mismatch result for %s\n", report.SHA256)
+			continue
+		}
+
+		t, err := time.Parse("2006-01-02 15:04:05", sample.Date)
+		if err != nil {
+			log.Println("Error: Invalid time format of VT result, ", sample.Date)
+			continue
+		}
+
+		// Filter scans
+		var scans []deepalert.EntityMalwareScan
+		for _, vendor := targetVendors {
+			if scan, ok := report.Scans[vendor]; ok {
+				scans = append(scans, deepalert.EntityMalwareScan{
+					Vendor   string `json:"vendor"`
+					Name     string `json:"name"`
+					Positive bool   `json:"positive"`
+					Source   string `json:"source"`
+				})
+			}
+		}
+
+		mwEntities = append(mwEntities, deepalert.EntityMalware{
+			SHA256:    report.SHA256,
+			Timestamp: t,
+			Relation:  sample.relation,
+			Scans:     scans,
+		})
+	}
+
+	return mwEntities, nil
+	/*
+		convMalwareReport := func(targets []VtSample, relation string) []deepalert.EntityMalwareScan {
+			mwTemp := []deepalert.EntityMalwareScan{}
+			for _, sample := range targets {
+				t, err := time.Parse("2006-01-02 15:04:05", sample.Date)
+				if err != nil {
+					log.Println("Error: Invalid time format of VT result, ", sample.Date)
+					continue
+				}
+
+				mwTemp = append(mwTemp, deepalert.EntityMalwareScan{
+					Vendor   string `json:"vendor"`
+					Name     string `json:"name"`
+					Positive bool   `json:"positive"`
+					Source   string `json:"source"`
+							})
 			}
 
-			mwTemp = append(mwTemp, ar.ReportMalware{
+			return mwTemp
+		}
+
+		var mwEntities deepalert.EntityMalware
+		for _, report := range mwReport {
+			mwEntities = append(mwEntities, deepalert.EntityMalware{
 				SHA256:    sample.SHA256,
 				Timestamp: t,
 				Relation:  relation,
+				convMalwareReport(report),
 			})
+
+			ies, ...)
 		}
-	}
 
-	for _, report := range mwReport {
-
-	}
-
-	return nil, nil
+		return mwEntities, nil
+	*/
 }
 
 /*

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/m-mizutani/deepalert"
-	main "github.com/m-mizutani/deepalert-crowdstrike-falcon"
+	main "github.com/m-mizutani/deepalert-virustotal"
 )
 
 func TestHandler(t *testing.T) {

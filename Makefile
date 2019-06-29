@@ -1,7 +1,5 @@
-StackName := $(shell jsonnet $(DEPLOY_CONFIG) | jq .StackName )
-Region := $(shell jsonnet $(DEPLOY_CONFIG) | jq .Region )
-CodeS3Bucket := $(shell jsonnet $(DEPLOY_CONFIG) | jq .CodeS3Bucket )
-CodeS3Prefix := $(shell jsonnet $(DEPLOY_CONFIG) | jq .CodeS3Prefix )
+DEPLOY_CONFIG ?= deploy.jsonnet
+TEMPLATE ?= template.jsonnet
 
 CWD := ${CURDIR}
 CODE_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
@@ -18,6 +16,8 @@ test:
 clean:
 	rm build/main
 
+build: $(BINPATH)
+
 $(BINPATH): $(CODE_DIR)/*.go
 	cd $(CODE_DIR) && env GOARCH=amd64 GOOS=linux go build -o build/main $(CODE_DIR) && cd $(CWD)
 
@@ -26,15 +26,15 @@ $(TEMPLATE_FILE): $(TEMPLATE)
 
 $(SAM_FILE): $(TEMPLATE_FILE) $(BINPATH)
 	aws cloudformation package \
-		--region $(Region) \
+		--region $(shell jsonnet $(DEPLOY_CONFIG) | jq .Region) \
 		--template-file $(TEMPLATE_FILE) \
-		--s3-bucket $(CodeS3Bucket) \
-		--s3-prefix $(CodeS3Prefix) \
+		--s3-bucket $(shell jsonnet $(DEPLOY_CONFIG) | jq .CodeS3Bucket) \
+		--s3-prefix $(shell jsonnet $(DEPLOY_CONFIG) | jq .CodeS3Prefix) \
 		--output-template-file $(SAM_FILE)
 
 deploy: $(SAM_FILE)
 	aws cloudformation deploy \
-		--region $(Region) \
+		--region $(shell jsonnet $(DEPLOY_CONFIG) | jq .Region) \
 		--template-file $(SAM_FILE) \
-		--stack-name $(StackName) \
+		--stack-name $(shell jsonnet $(DEPLOY_CONFIG) | jq .StackName) \
 		--capabilities CAPABILITY_IAM
