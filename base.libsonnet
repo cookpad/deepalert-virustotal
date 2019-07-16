@@ -1,3 +1,6 @@
+// --------------------------------------------------------
+// Lambda IAM role
+
 {
   build(DeepAlertStackName, SecretArn, LambdaRoleArn=''):: {
     local TaskTopic = {
@@ -10,19 +13,6 @@
     AWSTemplateFormatVersion: '2010-09-09',
     Transform: 'AWS::Serverless-2016-10-31',
 
-    Parameters: {
-      LambdaRoleArn: {
-        Type: 'String',
-        Default: LambdaRoleArn,
-      },
-    },
-
-    Conditions: {
-      LambdaRoleRequired: {
-        'Fn::Equals': [{ Ref: 'LambdaRoleArn' }, ''],
-      },
-    },
-
     Resources: {
       // --------------------------------------------------------
       // Lambda functions
@@ -34,10 +24,7 @@
           Runtime: 'go1.x',
           Timeout: 30,
           MemorySize: 128,
-          Role: {
-            Ref: 'LambdaRole',
-          },
-
+          Role: (if LambdaRoleArn != '' then LambdaRoleArn else { Ref: 'LambdaRole' } ),
           Environment: {
             Variables: {
               SECRET_ARN: SecretArn,
@@ -54,9 +41,7 @@
           },
         },
       },
-
-      // --------------------------------------------------------
-      // Lambda IAM role
+    } + (if LambdaRoleArn != '' then {} else {
       LambdaRole: {
         Type: 'AWS::IAM::Role',
         Condition: 'LambdaRoleRequired',
@@ -86,7 +71,7 @@
                     {
                       Effect: 'Allow',
                       Action: ['secretsmanager:GetSecretValue'],
-                      Resource: [{ Ref: 'SecretArn' }],
+                      Resource: [SecretArn],
                     },
                   ],
                 },
@@ -95,6 +80,6 @@
           },
         },
       },
-    },
+    }),
   },
 }
