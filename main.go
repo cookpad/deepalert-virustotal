@@ -7,18 +7,29 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/m-mizutani/deepalert"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 type Arguments struct {
 	Attr      deepalert.Attribute
 	SecretArn string
 }
+
+const (
+	sourceName = "VirusTotal"
+)
+
+var (
+	// Logger can be modified by test code
+	Logger = logrus.New()
+)
 
 func getSecretValues(secretArn string, values interface{}) error {
 	// sample: arn:aws:secretsmanager:ap-northeast-1:1234567890:secret:mytest
@@ -66,6 +77,30 @@ func insecptRemoteIPAddr(ipaddr, secretArn string) (*deepalert.TaskResult, error
 		return nil, errors.Wrapf(err, "Fail to query IP address to VirusTotal: %s", ipaddr)
 	}
 
+	// merge domain names
+	var domainReport []deepalert.EntityDomain
+	for _, resolution := range vtReport.Resolutions {
+		t, _ := time.Parse("2006-01-02 15:04:05", resolution.LastResolved)
+		domainReport = append(domainReport, deepalert.EntityDomain{
+			Name:      resolution.HostName,
+			Timestamp: t,
+			Source:    sourceName,
+		})
+	}
+	sort.Slice(domainReport, func(i, j int) bool { return domainReport[i].Timestamp.After(domainReport[j].Timestamp) })
+
+	// merge URLs
+	var urlReport []deepalert.EntityURL
+	for _, url := range vtReport.DetectedURLs {
+		t, _ := time.Parse("2006-01-02 15:04:05", url.ScanDate)
+		urlReport = append(urlReport, deepalert.EntityURL{
+			URL:       url.URL,
+			Timestamp: t,
+			Source:    sourceName,
+		})
+	}
+	sort.Slice(urlReport, func(i, j int) bool { return urlReport[i].Timestamp.After(urlReport[j].Timestamp) })
+
 	// merge detected samples
 	var samples []VtSample
 	extend := func(sampleSet []VtSample, relation string) {
@@ -96,7 +131,9 @@ func insecptRemoteIPAddr(ipaddr, secretArn string) (*deepalert.TaskResult, error
 	}
 
 	host := deepalert.ReportHost{
+		RelatedDomains: domainReport,
 		RelatedMalware: malwareReport,
+		RelatedURLs:    urlReport,
 	}
 
 	return &deepalert.TaskResult{Contents: []deepalert.ReportContentEntity{&host}}, nil
@@ -108,8 +145,6 @@ func insecptRemoteDomain(ipaddr, secretArn string) (*deepalert.TaskResult, error
 
 func handler(args Arguments) (*deepalert.TaskResult, error) {
 	switch {
-	case args.Attr.Match(deepalert.CtxRemote, deepalert.TypeIPAddr):
-		return insecptRemoteIPAddr(args.Attr.Value, args.SecretArn)
 	case args.Attr.Match(deepalert.CtxRemote, deepalert.TypeIPAddr):
 		return insecptRemoteIPAddr(args.Attr.Value, args.SecretArn)
 	default:
@@ -126,6 +161,9 @@ func lambdaHandler(ctx context.Context, attr deepalert.Attribute) (*deepalert.Ta
 }
 
 func main() {
+	Logger.SetFormatter(&logrus.JSONFormatter{})
+	Logger.SetLevel(logrus.InfoLevel)
+
 	deepalert.StartInspector(lambdaHandler, "virustotal",
 		os.Getenv("ContentTopic"), os.Getenv("AttributeTopic"))
 }

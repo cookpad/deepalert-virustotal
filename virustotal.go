@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 type VirusTotal struct {
@@ -90,7 +91,9 @@ func (x *VirusTotal) Query(api string, param url.Values, res interface{}) error 
 
 	if resp.StatusCode == 204 {
 		// Hits API rate limit, wait 30 sec and retry.
-		time.Sleep(30 * time.Second)
+		var wait time.Duration = 30 * time.Second
+		Logger.WithField("second", wait).Debug("Sleeping for next query...")
+		time.Sleep(wait)
 		return x.Query(api, param, res)
 	}
 
@@ -103,9 +106,17 @@ func (x *VirusTotal) Query(api string, param url.Values, res interface{}) error 
 		return errors.Wrap(err, "Fail to read response from VT")
 	}
 
+	if resp.StatusCode != 200 {
+		Logger.WithFields(logrus.Fields{
+			"code":   resp.StatusCode,
+			"result": string(resData),
+		}).Error("Response from VirusTotal")
+		return fmt.Errorf("Status code is not 200: %d", resp.StatusCode)
+	}
+
 	err = json.Unmarshal(resData, &res)
 	if err != nil {
-		return errors.Wrap(err, "Fail to parse JSON of a response from VT")
+		return errors.Wrapf(err, "Fail to parse JSON of a response from VT")
 	}
 
 	// _ = ioutil.WriteFile("vt.json", resData, 0644)

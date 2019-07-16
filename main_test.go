@@ -1,23 +1,52 @@
 package main_test
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"log"
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
+	"github.com/k0kubun/pp"
 	"github.com/m-mizutani/deepalert"
 	main "github.com/m-mizutani/deepalert-virustotal"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
+
+type config struct {
+	SecretArn       string
+	VirusTotalToken string
+}
+
+func loadConfig() config {
+	var cfg config
+	confPath := "test.json"
+	data, err := ioutil.ReadFile(confPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		log.Fatal(err)
+	}
+	return cfg
+}
+
+var testConfig config
+
+func init() {
+	testConfig = loadConfig()
+	main.Logger.SetLevel(logrus.DebugLevel)
+}
 
 func TestHandler(t *testing.T) {
 	args := main.Arguments{
 		Attr: deepalert.Attribute{
-			Type:  deepalert.TypeIPAddr,
-			Value: "192.168.0.1",
+			Type:    deepalert.TypeIPAddr,
+			Value:   "192.168.0.1",
+			Context: []deepalert.AttrContext{deepalert.CtxRemote},
 		},
-		SecretArn: os.Getenv("DA_TEST_SECRET"),
+		SecretArn: testConfig.SecretArn,
 	}
 	_, err := main.Handler(args)
 	assert.NoError(t, err)
@@ -32,20 +61,17 @@ func TestHandlerWithClientIPAddr(t *testing.T) {
 
 	args := main.Arguments{
 		Attr: deepalert.Attribute{
-			Type:  deepalert.TypeIPAddr,
-			Value: ipaddr,
+			Type:    deepalert.TypeIPAddr,
+			Value:   ipaddr,
+			Context: []deepalert.AttrContext{deepalert.CtxRemote},
 		},
-		SecretArn: os.Getenv("DA_TEST_SECRET"),
+		SecretArn: testConfig.SecretArn,
 	}
-	entity, err := main.Handler(args)
-	assert.NoError(t, err)
 
-	host, ok := entity.(*deepalert.ReportHost)
-	require.True(t, ok)
-	assert.NotEqual(t, 0, len(host.IPAddr))
-	assert.NotEqual(t, 0, len(host.OS))
-	assert.NotEqual(t, 0, len(host.MACAddr))
-	assert.NotEqual(t, 0, len(host.HostName))
+	result, err := main.Handler(args)
+	assert.NoError(t, err)
+	assert.NotEqual(t, 0, len(result.Contents))
+	pp.Println(result)
 }
 
 func TestNoResponse(t *testing.T) {
