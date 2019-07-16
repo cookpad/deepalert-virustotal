@@ -1,5 +1,5 @@
 DEPLOY_CONFIG ?= deploy.jsonnet
-TEMPLATE ?= template.jsonnet
+STACK_CONFIG ?= stack.jsonnet
 
 CODE_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 CWD := ${CURDIR}
@@ -7,7 +7,7 @@ BINPATH := build/main
 
 TEMPLATE_FILE := template.json
 SAM_FILE := sam.yml
-BASE_FILE := $(CODE_DIR)/base.libsonnet
+BASE_FILE := $(CODE_DIR)/template.libsonnet
 
 all: deploy
 
@@ -22,8 +22,8 @@ build: $(BINPATH)
 $(BINPATH): $(CODE_DIR)/*.go
 	cd $(CODE_DIR) && env GOARCH=amd64 GOOS=linux go build -o $(CWD)/build/main && cd $(CWD)
 
-$(TEMPLATE_FILE): $(TEMPLATE) $(BASE_FILE)
-	jsonnet -J $(CODE_DIR) $(TEMPLATE) -o $(TEMPLATE_FILE)
+$(TEMPLATE_FILE): $(STACK_CONFIG) $(BASE_FILE)
+	jsonnet -J $(CODE_DIR) $(STACK_CONFIG) -o $(TEMPLATE_FILE)
 
 $(SAM_FILE): $(TEMPLATE_FILE) $(BINPATH)
 	aws cloudformation package \
