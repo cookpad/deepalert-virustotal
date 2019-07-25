@@ -136,7 +136,7 @@ func insecptRemoteIPAddr(ipaddr, secretArn string) (*deepalert.TaskResult, error
 		RelatedURLs:    urlReport,
 	}
 
-	return &deepalert.TaskResult{Contents: []deepalert.ReportContentEntity{&host}}, nil
+	return &deepalert.TaskResult{Contents: []deepalert.ReportContent{&host}}, nil
 }
 
 func insecptRemoteDomain(ipaddr, secretArn string) (*deepalert.TaskResult, error) {
