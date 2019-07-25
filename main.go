@@ -155,7 +155,7 @@ func handler(args Arguments) (*deepalert.TaskResult, error) {
 func lambdaHandler(ctx context.Context, attr deepalert.Attribute) (*deepalert.TaskResult, error) {
 	args := Arguments{
 		Attr:      attr,
-		SecretArn: os.Getenv("SecretArn"),
+		SecretArn: os.Getenv("SECRET_ARN"),
 	}
 	return handler(args)
 }
