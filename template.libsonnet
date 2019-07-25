@@ -6,6 +6,9 @@
     local ContentTopic = {
       'Fn::ImportValue': DeepAlertStackName + '-ContentTopic',
     },
+    local AttributeTopic = {
+      'Fn::ImportValue': DeepAlertStackName + '-AttributeTopic',
+    },
 
     AWSTemplateFormatVersion: '2010-09-09',
     Transform: 'AWS::Serverless-2016-10-31',
@@ -26,6 +29,7 @@
             Variables: {
               SECRET_ARN: SecretArn,
               CONTENT_TOPIC: ContentTopic,
+              ATTRIBUTE_TOPIC: AttributeTopic,
             },
           },
           Events: {

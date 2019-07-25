@@ -165,5 +165,5 @@ func main() {
 	Logger.SetLevel(logrus.InfoLevel)
 
 	deepalert.StartInspector(lambdaHandler, "virustotal",
-		os.Getenv("ContentTopic"), os.Getenv("AttributeTopic"))
+		os.Getenv("CONTENT_TOPIC"), os.Getenv("ATTRIBUTE_TOPIC"))
 }
