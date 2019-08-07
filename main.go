@@ -64,13 +64,8 @@ type vtSecrets struct {
 	VirusTotalToken string `json:"virustotal_token"`
 }
 
-func insecptRemoteIPAddr(ipaddr, secretArn string) (*deepalert.TaskResult, error) {
-	var secrets vtSecrets
-	if err := getSecretValues(secretArn, &secrets); err != nil {
-		return nil, err
-	}
-
-	vt := newVirusTotal(secrets.VirusTotalToken)
+func insecptRemoteIPAddr(ipaddr, token string) (*deepalert.TaskResult, error) {
+	vt := newVirusTotal(token)
 
 	vtReport, err := vt.QueryIPAddr(ipaddr)
 	if err != nil {
@@ -139,14 +134,80 @@ func insecptRemoteIPAddr(ipaddr, secretArn string) (*deepalert.TaskResult, error
 	return &deepalert.TaskResult{Contents: []deepalert.ReportContent{&host}}, nil
 }
 
-func insecptRemoteDomain(ipaddr, secretArn string) (*deepalert.TaskResult, error) {
-	return nil, nil
+func insecptRemoteDomain(domain, token string) (*deepalert.TaskResult, error) {
+	vt := newVirusTotal(token)
+
+	vtReport, err := vt.QueryDomain(domain)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Fail to query domain to VirusTotal: %s", domain)
+	}
+
+	// merge URLs
+	var urlReport []deepalert.EntityURL
+	for _, url := range vtReport.DetectedURLs {
+		t, _ := time.Parse("2006-01-02 15:04:05", url.ScanDate)
+		urlReport = append(urlReport, deepalert.EntityURL{
+			URL:       url.URL,
+			Timestamp: t,
+			Source:    sourceName,
+		})
+	}
+	sort.Slice(urlReport, func(i, j int) bool { return urlReport[i].Timestamp.After(urlReport[j].Timestamp) })
+
+	// merge detected samples
+	var samples []VtSample
+	extend := func(sampleSet []VtSample, relation string) {
+		for _, s := range sampleSet {
+			s.relation = relation
+			samples = append(samples, s)
+		}
+	}
+	extend(vtReport.DetectedDownloadedSamples, "downloaded")
+	extend(vtReport.DetectedCommunicatingSamples, "communicated")
+	extend(vtReport.DetectedReferrerSamples, "referrer")
+
+	sort.Slice(samples, func(i, j int) bool {
+		return samples[i].Date > samples[j].Date
+	})
+
+	// Maximum number of samples that will be queried is defined because of limit of VT API.
+	sampleLimit := 8
+	var targets []VtSample
+	targets = append(targets, samples...)
+	if len(targets) > sampleLimit {
+		targets = targets[:sampleLimit]
+	}
+
+	malwareReport, err := traceMalware(targets, &vt)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Fail to trace Malware for %s", domain)
+	}
+
+	host := deepalert.ReportHost{
+		RelatedMalware: malwareReport,
+		RelatedURLs:    urlReport,
+	}
+
+	return &deepalert.TaskResult{Contents: []deepalert.ReportContent{&host}}, nil
 }
 
 func handler(args Arguments) (*deepalert.TaskResult, error) {
+	var secrets vtSecrets
+
 	switch {
 	case args.Attr.Match(deepalert.CtxRemote, deepalert.TypeIPAddr):
-		return insecptRemoteIPAddr(args.Attr.Value, args.SecretArn)
+		// To prevent call getSecretValues in every invocation
+		if err := getSecretValues(args.SecretArn, &secrets); err != nil {
+			return nil, err
+		}
+		return insecptRemoteIPAddr(args.Attr.Value, secrets.VirusTotalToken)
+
+	case args.Attr.Type == deepalert.TypeDomainName:
+		if err := getSecretValues(args.SecretArn, &secrets); err != nil {
+			return nil, err
+		}
+		return insecptRemoteDomain(args.Attr.Value, secrets.VirusTotalToken)
+
 	default:
 		return nil, nil
 	}

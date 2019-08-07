@@ -86,3 +86,31 @@ func TestNoResponse(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Nil(t, entity)
 }
+
+func TestHandlerIPAddr(t *testing.T) {
+	ipaddr := "185.53.177.31"
+
+	result, err := main.InsecptRemoteIPAddr(ipaddr, testConfig.VirusTotalToken)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(result.Contents))
+	host, ok := result.Contents[0].(*deepalert.ReportHost)
+	assert.True(t, ok)
+	assert.NotNil(t, host)
+	assert.NotZero(t, len(host.RelatedMalware))
+	assert.NotZero(t, len(host.RelatedURLs))
+	assert.NotZero(t, len(host.RelatedDomains))
+}
+
+func TestHandlerDomain(t *testing.T) {
+	domain := "027.ru"
+
+	result, err := main.InsecptRemoteDomain(domain, testConfig.VirusTotalToken)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(result.Contents))
+	host, ok := result.Contents[0].(*deepalert.ReportHost)
+	assert.True(t, ok)
+	assert.NotNil(t, host)
+	assert.NotZero(t, len(host.RelatedMalware))
+	assert.NotZero(t, len(host.RelatedURLs))
+	assert.Zero(t, len(host.RelatedDomains))
+}

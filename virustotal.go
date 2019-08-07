@@ -48,6 +48,7 @@ type VtSample struct {
 type vtResolution struct {
 	LastResolved string `json:"last_resolved"`
 	HostName     string `json:"hostname"`
+	IPAddress    string `json:"ip_address"`
 }
 
 type vtURL struct {
@@ -65,6 +66,27 @@ type VirusTotalIPAddrReport struct {
 	DetectedDownloadedSamples    []VtSample     `json:"detected_downloaded_samples"`
 	DetectedCommunicatingSamples []VtSample     `json:"detected_communicating_samples"`
 	DetectedReferrerSamples      []VtSample     `json:"detected_referrer_samples"`
+}
+
+type VirusTotalDomainReport struct {
+	ResponseCode                 int            `json:"response_code"`
+	WhoisTimestamp               int            `json:"whois_timestamp"`
+	Whois                        string         `json:"whois"`
+	DetectedURLs                 []vtURL        `json:"detected_urls"`
+	DetectedReferrerSamples      []VtSample     `json:"detected_referrer_samples"`
+	DetectedDownloadedSamples    []VtSample     `json:"detected_downloaded_samples"`
+	DetectedCommunicatingSamples []VtSample     `json:"detected_communicating_samples"`
+	UndetectedReferrerSamples    []VtSample     `json:"undetected_referrer_samples"`
+	Resolutions                  []vtResolution `json:"resolutions"`
+	SubDomains                   []string       `json:"subdomains"`
+	Categories                   []string       `json:"categories"`
+	VerboseMsg                   string         `json:"verbose_msg"`
+
+	UndetectedURLs []interface{} `json:"undetected_urls"`
+	DomainSiblings []interface{} `json:"domain_siblings"`
+	// unknown schemes:
+	// - undetected_urls
+	// - domain_siblings
 }
 
 func newVirusTotal(token string) VirusTotal {
@@ -176,6 +198,17 @@ func (x *VirusTotal) QueryIPAddr(ipaddr string) (VirusTotalIPAddrReport, error) 
 	qs.Set("ip", ipaddr)
 	report := VirusTotalIPAddrReport{}
 	err := x.Query("ip-address/report", qs, &report)
+	if err != nil {
+		return report, err
+	}
+	return report, nil
+}
+
+func (x *VirusTotal) QueryDomain(domain string) (VirusTotalDomainReport, error) {
+	qs := url.Values{}
+	qs.Set("domain", domain)
+	report := VirusTotalDomainReport{}
+	err := x.Query("domain/report", qs, &report)
 	if err != nil {
 		return report, err
 	}

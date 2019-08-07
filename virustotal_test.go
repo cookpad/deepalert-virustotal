@@ -47,3 +47,14 @@ func TestVirusTotalIPAddr(t *testing.T) {
 	assert.NotEqual(t, 0, len(report.Resolutions))
 	assert.Equal(t, 1, report.ResponseCode)
 }
+
+func TestVirusTotalDomain(t *testing.T) {
+	// 027.ru
+	vt := main.NewVirusTotal(testConfig.VirusTotalToken)
+	report, err := vt.QueryDomain("027.ru")
+
+	assert.Nil(t, err)
+	assert.Equal(t, 1, report.ResponseCode)
+	assert.NotZero(t, len(report.Resolutions))
+	assert.NotZero(t, len(report.DetectedURLs))
+}
