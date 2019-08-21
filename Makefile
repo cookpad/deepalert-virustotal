@@ -8,6 +8,9 @@ BINPATH := build/main
 TEMPLATE_FILE := template.json
 SAM_FILE := sam.yml
 BASE_FILE := $(CODE_DIR)/template.libsonnet
+OUTPUT_FILE := $(CWD)/output.json
+
+STACK_NAME := $(shell jsonnet $(DEPLOY_CONFIG) | jq .StackName)
 
 all: deploy
 
@@ -33,10 +36,13 @@ $(SAM_FILE): $(TEMPLATE_FILE) $(BINPATH)
 		--s3-prefix $(shell jsonnet $(DEPLOY_CONFIG) | jq .CodeS3Prefix) \
 		--output-template-file $(SAM_FILE)
 
-deploy: $(SAM_FILE)
+$(OUTPUT_FILE): $(SAM_FILE)
 	aws cloudformation deploy \
 		--region $(shell jsonnet $(DEPLOY_CONFIG) | jq .Region) \
 		--template-file $(SAM_FILE) \
-		--stack-name $(shell jsonnet $(DEPLOY_CONFIG) | jq .StackName) \
+		--stack-name $(STACK_NAME) \
 		--capabilities CAPABILITY_IAM \
 		--no-fail-on-empty-changeset
+	aws cloudformation describe-stack-resources --stack-name $(STACK_NAME) > $(OUTPUT_FILE)
+
+deploy: $(OUTPUT_FILE)
