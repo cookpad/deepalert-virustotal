@@ -28,7 +28,7 @@ $(BINPATH): $(CODE_DIR)/*.go
 $(TEMPLATE_FILE): $(STACK_CONFIG) $(BASE_FILE)
 	jsonnet -J $(CODE_DIR) $(STACK_CONFIG) -o $(TEMPLATE_FILE)
 
-$(SAM_FILE): $(TEMPLATE_FILE) $(BINPATH)
+$(SAM_FILE): $(TEMPLATE_FILE) $(BINPATH) $(DEPLOY_CONFIG)
 	aws cloudformation package \
 		--region $(shell jsonnet $(DEPLOY_CONFIG) | jq .Region) \
 		--template-file $(TEMPLATE_FILE) \
