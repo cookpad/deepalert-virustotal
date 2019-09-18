@@ -74,19 +74,6 @@ func TestHandlerWithClientIPAddr(t *testing.T) {
 	pp.Println(result)
 }
 
-func TestNoResponse(t *testing.T) {
-	args := main.Arguments{
-		Attr: deepalert.Attribute{
-			Type: deepalert.TypeDomainName,
-		},
-		SecretArn: os.Getenv("DA_TEST_SECRET"),
-	}
-
-	entity, err := main.Handler(args)
-	assert.NoError(t, err)
-	assert.Nil(t, entity)
-}
-
 func TestHandlerIPAddr(t *testing.T) {
 	ipaddr := "185.53.177.31"
 
