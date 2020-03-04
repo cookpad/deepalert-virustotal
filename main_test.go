@@ -22,6 +22,10 @@ type config struct {
 func loadConfig() config {
 	var cfg config
 	confPath := "test.json"
+	if v := os.Getenv("TEST_CONFIG_PATH"); v != "" {
+		confPath = v
+	}
+
 	data, err := ioutil.ReadFile(confPath)
 	if err != nil {
 		log.Fatal(err)

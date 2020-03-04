@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/m-mizutani/deepalert"
+	"github.com/m-mizutani/deepalert/inspector"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -225,6 +226,10 @@ func main() {
 	Logger.SetFormatter(&logrus.JSONFormatter{})
 	Logger.SetLevel(logrus.InfoLevel)
 
-	deepalert.StartInspector(lambdaHandler, "virustotal",
-		os.Getenv("CONTENT_TOPIC"), os.Getenv("ATTRIBUTE_TOPIC"))
+	inspector.Start(inspector.Arguments{
+		Handler:         lambdaHandler,
+		Author:          "virustotal",
+		ContentQueueURL: os.Getenv("CONTENT_QUEUE"),
+		AttrQueueURL:    os.Getenv("ATTRIBUTE_QUEUE"),
+	})
 }
