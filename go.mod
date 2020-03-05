@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.29.17
 	github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88 // indirect
 	github.com/k0kubun/pp v3.0.1+incompatible
-	github.com/m-mizutani/deepalert v0.0.0-20200304135145-ec229943db24
+	github.com/m-mizutani/deepalert v0.0.0-20200304233039-e861e7b185b9
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/pkg/errors v0.9.1

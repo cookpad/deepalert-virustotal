@@ -57,6 +57,8 @@ github.com/m-mizutani/deepalert v0.0.0-20190821013142-d7431b074ed2 h1:d/BZZlFYz9
 github.com/m-mizutani/deepalert v0.0.0-20190821013142-d7431b074ed2/go.mod h1:NlYGGNPITTcSiUbU7E2H830XI64/HSfV2GHpEqhBdhU=
 github.com/m-mizutani/deepalert v0.0.0-20200304135145-ec229943db24 h1:MZ71H01rAzOBm3ZCA6SK6WmeGT7hinDJ1uPDjbcwtqU=
 github.com/m-mizutani/deepalert v0.0.0-20200304135145-ec229943db24/go.mod h1:kktLv1BU83TO8tpO01AFs78zRJj0iGTlbknkVSQ08fk=
+github.com/m-mizutani/deepalert v0.0.0-20200304233039-e861e7b185b9 h1:BLcMyjNZjGLUNgfFo1hBVSPn/z3csgD1hitEs8tYF6k=
+github.com/m-mizutani/deepalert v0.0.0-20200304233039-e861e7b185b9/go.mod h1:kktLv1BU83TO8tpO01AFs78zRJj0iGTlbknkVSQ08fk=
 github.com/m-mizutani/generalprobe v0.0.0-20190727060841-28e965caf579 h1:ysw/PuMP9wExFJiNqgmSpRgh6k613PI03bZHsXiQybU=
 github.com/m-mizutani/generalprobe v0.0.0-20190727060841-28e965caf579/go.mod h1:CuJ4AMonHoCfQcam3gni5BUzOSC06Ed7FhrPx6gDxYo=
 github.com/mattn/go-colorable v0.1.2 h1:/bC9yWikZXAL9uJdulbSfyVNIR3n3trXl+v8+1sx8mU=
