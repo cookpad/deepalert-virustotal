@@ -24,7 +24,7 @@ test:
 	go test -v
 
 clean:
-	rm build/main
+	rm -f build/main
 
 build: $(BINPATH)
 
